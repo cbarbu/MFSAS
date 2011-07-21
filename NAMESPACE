@@ -1,0 +1,20 @@
+importFrom("graphics", plot, persp, contour)
+
+export("Ocmult")
+
+exportClasses("Ocmult",
+              "Ocmult.multinomial",
+              "Ocmult.hypergeom")
+
+exportMethods("show",
+              "summary",
+              "plot",
+              "persp",
+              "contour")
+
+export("assess.multi",
+       "find.multi.plan",
+       "pmultihyper",
+       "pmultinom",
+       "pnmultihyper",
+       "pnmultinom")

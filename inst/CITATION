@@ -1,0 +1,20 @@
+citHeader("To cite MFSAS in publications use:")
+
+citEntry(entry = "Article",
+  title        = "Multilevel Fixed and Sequential Acceptance Sampling: The {R} Package {MFSAS}",
+  author       = personList(as.person("Aaron Childs"),
+                   as.person("Yalin Chen")),
+  journal      = "Journal of Statistical Software",
+  year         = "2011",
+  volume       = "43",
+  number       = "6",
+  pages        = "1--20",
+  url          = "http://www.jstatsoft.org/v43/i06/",
+
+  textVersion  =
+  paste("Aaron Childs, Yalin Chen (2011).",
+        "Multilevel Fixed and Sequential Acceptance Sampling: The R Package MFSAS.",
+        "Journal of Statistical Software, 43(6), 1-20.",
+        "URL http://www.jstatsoft.org/v43/i06/.")
+)
+

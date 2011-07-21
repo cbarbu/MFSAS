@@ -1,0 +1,899 @@
+\documentclass[nojss,article]{jss}
+\usepackage{amsmath, amssymb,xspace,thumbpdf}
+
+%% need no \usepackage{Sweave}
+\SweaveOpts{prefix.string=figure, strip.white=true, eps=false, engine=R}
+%\VignetteIndexEntry{Multilevel Fixed and Sequential Acceptance Sampling: The R Package MFSAS}
+%\VignetteKeywords{multilevel quality control, multinomial distribution, multivariate hypergeometric distribution, negative multinomial distribution, negative multivariate hypergeometric distribution}
+%\VignettePackage{MFSAS}
+
+\author{Aaron Childs\\McMaster University
+   \And Yalin Chen \\B.C. Centre for Excellence in HIV/AIDS}
+\Plainauthor{Aaron Childs, Yalin Chen}
+
+\title{Multilevel Fixed and Sequential Acceptance Sampling: The \proglang{R} Package \pkg{MFSAS}}
+\Plaintitle{Multilevel Fixed and Sequential Acceptance Sampling: The R Package MFSAS}
+\Shorttitle{\pkg{MFSAS}: Multilevel Fixed and Sequential Acceptance Sampling in \proglang{R}}
+
+\Abstract{
+  This introduction to the \proglang{R} package \pkg{MFSAS} is a (slightly)
+  modified version of \cite{Childs2011}, published in the
+  \emph{Journal of Statistical Software}.
+
+  Multilevel acceptance sampling for attributes is used to decide whether a lot from an
+  incoming shipment or outgoing  production is accepted or rejected 
+  when the product has multiple levels of product quality or multiple types of 
+  (mutually exclusive) possible defects. This paper describes a package which 
+  provides the tools to create, evaluate, plot, and display the acceptance 
+  sampling plans for such lots for both fixed and sequential sampling. 
+  The functions for calculating  cumulative probabilities for several common 
+  multivariate distributions (which are needed in the package) are provided as well.
+}
+\Keywords{multilevel quality control, multinomial distribution, multivariate hypergeometric distribution, negative multinomial distribution, negative multivariate hypergeometric distribution}
+
+\Address{
+  Aaron Childs\\
+  Department of Mathematics and Statistics\\
+  McMaster University\\
+  Hamilton, Ontario, Canada L8S 4K1\\
+  Telephone: 905-525-9140 Ext: 23426\\
+  E-mail: \email{childsa@mcmaster.ca}\\
+  URL: \url{http://www.math.mcmaster.ca/childsa/childs.html}
+}
+
+
+\begin{document}
+
+Acceptance sampling is used to decide whether a lot from a manufacturer should be 
+  accepted or rejected by making an inference about the lot quality based on 
+  a sample. The product quality can be described by classifying a single 
+  characteristic of the product using more than two discrete levels in 
+  many circumstances.  For example, a food product could be classified as 
+  good, marginal, or bad,  depending on the concentration of harmful 
+  microorganisms in the product.  In \cite{MIL-STD-105E} the U.S. Department of Defense establishes military standards for sampling plans in which products are classified as
+  critical defective, major defective, minor defective, or nondefective. 
+  Other examples of three or more classifications can be found in \cite{Radha2009}, \cite{Cassady2003},
+  \cite{Bray1973}, \cite{New1988}, \cite{Thatcher1978}, and \cite{Shapiro1990}.
+
+In this paper we describe a new \proglang{R} \citep{rcore} package for multilevel acceptance sampling in which two types of sampling plans are provided. The first type is \code{"fixed"} 
+ sampling, in which a sample of size $n$ is selected from the lot for inspection. 
+After inspection, the consumer will either accept or reject the lot, depending on the number of defectives of each type that are found in the sample. Let $k$ ($\geq 2$) denote the number of different levels of product quality, $k-1$ of which are considered to be defective items, and one of which
+ consists of nondefective or good items.  Let $X_i$ be the number of 
+ defectives of type $i$ in the sample, for $i=1,2,\dots, k-1$, and let $X_k$ denote the number of good items. A fixed 
+ sampling plan requires a sample size $n$ and rejection numbers $r_i$ with the property that the lot will
+ be rejected if $X_i \geq r_i$ for any $i$ in \{$1,2,\dots, k-1 $\}.  That is, the sample is rejected if there are too many of any one type of defect.
+ 
+The second type of plan that we provide is for \code{"sequential"} sampling, in which items in the lot are 
+ selected one at a time for inspection.  A sequential sampling plan requires
+ a cell quota $m$ for the good items and cell quotas $r_i$ for
+ the each of the defective items, for $i=1, 2, \dots, k-1$. Sampling continues 
+ until either the number of good items or any of the $k-1$ types of defectives 
+ reaches its respective quota. If the former occurs first, then the lot is accepted;
+ otherwise it is rejected. 
+
+Sequential sampling has the advantage that it will require, on average, 
+    less items to be inspected than for fixed sampling. This will be 
+    advantageous if the testing is expensive, or if the units
+    are destroyed in the testing.  Fixed sampling, however, allows for units in the sample to be tested simultaneously, whereas in sequential sampling the items have to be tested one at a time.  Therefore sequential sampling will not be as practical if the testing of items is time consuming.
+    
+For each type of sampling plan we provide the option for the sampling to be \emph{with} or \emph{without} replacement.  These sampling modes are determined by specifying the type of distribution, which can be either \code{multinomial} (for sampling with replacement) or \code{hypergeom} (for sampling without replacement).  When sampling is without replacement, the lot size $N$ also needs to be specified.  
+
+In addition, all plans require a matrix $pd$ whose rows contain the proportions of each of the $k-1$ types of defectives in the lot.  Thus the rows of the matrix $pd$ determine different levels of \emph{lot quality}.
+
+ Once a sampling plan has been determined,  the probability $pa$ of accepting 
+   lots can be calculated  for various levels of lot quality to obtain the
+   \emph{operating characteristic} (OC) function. For 2-level or 3-level acceptance 
+   sampling plans the OC function can then be plotted as a curve or surface, respectively.  Two particular levels of lot quality that are used to assess a sampling plan are the \emph{producer's quality level} (PQL), which consists of proportions of each type of defective considered by the producer to be acceptable, and the \emph{consumer's quality level} (CQL), consisting of proportions of each type of defective considered by the consumer to be unacceptable.  Since the decision to accept or reject the lot is based only on a sample, there is always the possibility  that an incorrect decision is made.  This would occur if a lot which has the producer's quality level is rejected by the plan, or if a lot which has the consumer's quality level is accepted by the plan.  Then the probability of an incorrect 
+  decision is either
+ 
+\begin{itemize}
+\item  The \emph{producer's risk} $\alpha$, which is the 
+  probability that a lot which has the producer's quality level is rejected by the plan,
+  \end{itemize}
+or
+\begin{itemize}
+ \item The \emph{consumer's risk} $\beta$, which is the probability that a lot 
+ which has the consumer's quality level is accepted by the plan.
+\end{itemize} 
+  
+In other words, the producer's risk $\alpha$ is the probability that a batch of high quality is rejected, and the consumer's risk $\beta$ is the probability that a batch of low quality is accepted.  These two risks are analogous to the Type-I and Type-II errors in hypothesis testing.
+
+For each of the four possible combinations of sampling type (fixed and sequential) and sampling mode (with and without replacement) this package allows the user to create sampling plans that have pre-specified maximum values for $\alpha$ and $\beta$, given values for the PQL and CQL.  The user can also evaluate whether a given sampling plan meets specified maximum values for $\alpha$ and $\beta$, to plot the OC curve or surface for 2-level or 3-level plans, and to display acceptance probabilities for any given levels of lot quality.
+
+A related \proglang{R} package called \pkg{AcceptanceSampling} was developed by \cite{Kiermeier2008} and can be used when the sample size is fixed and there are $k=2$ levels of 
+  product quality. The \pkg{MFSAS} package described here extends the functionality
+  of the \pkg{AcceptanceSampling} package by allowing for more than two levels of 
+  product quality, and by allowing the sampling type to be sequential, in addition
+  to fixed. However, fixed sampling in the \pkg{MFSAS} package is restricted to single stage sampling for attributes, whereas the \pkg{AcceptanceSampling} package allows the sampling
+  to be multi-stage (in which the decision at each stage of sampling can be to accept the lot, reject the lot, or take an additional sample of items) and provides functionality for sampling inspection by variables, 
+  in addition to attributes.  Further details about the \pkg{AcceptanceSampling} 
+  package, as well as some background on acceptance sampling in general can be found
+  in \cite{Kiermeier2008}. For an up-to-date and complete reference on all aspects 
+  of acceptance sampling the reader is referred to \cite{Schilling2009}.
+
+%%\newpage 
+\section[The MFSAS package]{The \pkg{MFSAS} package}
+\label{sec:multi-pack}
+
+The \pkg{MFSAS} package is based on formal
+ \proglang{S4} classes and methods. 
+ It provides functionality for creating, evaluating, and plotting $k$-level 
+  acceptance sampling plans for attributes according to different distributional 
+  assumptions. 
+
+\subsection{Object classes}
+\label{sec:objects-classes}
+
+The package consists of a virtual class, \code{Ocmult}. In this class the two 
+  parameters are \code{type} (the type of distribution) and \code{stype} (the 
+  type of sampling). The distributions that can be specified for \code{type} are 
+   \begin{itemize}
+   \item \code{multinomial} which is used if the number of items in the lot 
+      is assumed to be large relative to the sample size, or if the sample is taken
+      with replacement. 
+   \item \code{hypergeom} which is used when the lot is finite and the 
+      sample is taken without replacement.
+   \end{itemize}
+The types of sampling that can be specified with \code{stype} are 
+   \begin{itemize}
+     \item \code{fixed} for fixed sampling, in which a sample of size $n$ is selected
+     from the lot. For this type of sampling, calculations are based on either the 
+     multinomial or multivariate hypergeometric distribution, depending on the value
+     specified for \code{type}. 
+     \item \code{sequential} for sequential sampling, in which items are selected one
+     at a time for inspection. Here calculations are based on either the negative 
+     multinomial or negative multivariate hypergeometric distribution, depending 
+     on the value specified for \code{type} (which is still either \code{multinomial} or \code{hypergeom}). 
+   \end{itemize}
+
+
+The two actual classes, \code{Ocmult.multinomial} and \code{Ocmult.hypergeom} are
+  derived from \code{Ocmult} (see Figure~\ref{fig:class_structure}). 
+
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=5.5in]{class_structure.pdf}
+  \caption{Class structure.}
+  \label{fig:class_structure}
+\end{figure}
+
+Both classes contain the \code{Ocmult} virtual class, hence its slots. 
+ Objects of the two classes can be generated by the \code{Ocmult}
+  function which takes the following arguments.
+    \begin{description}
+      \item [\code{rn}: ] A vector of length $k-1$ consisting of rejection 
+         numbers for fixed sampling, or cell quotas for the defective items for 
+         sequential sampling.
+      \item [\code{pd}: ] A matrix with $k-1$ columns, whose rows contain the 
+       proportions of each type of defective in the lot.  
+      \item [\code{stype}:]  The type of sampling.
+      \item [\code{type}:] The  type of distribution on which the plans are based.
+      \item[\code{...}:] Additional arguments which depend on the distribution
+        to be used and the type of sampling. When \code{type="hypergeom"}  the lot size 
+        \code{N} needs to be specified. Since \code{pd*N} is a matrix containing 
+         the actual number of each type of defective in the lot, its entries must be 
+         nonnegative integers.  The \code{stype="fixed"}  needs \code{n} (the 
+         sample size), and for \code{stype="seq"} \code{m} (the cell quota 
+         for good items) must be provided.
+    \end{description}
+
+
+Arguments for the \code{Ocmult} function for the different types of distribution and sampling are summarized in Table~\ref{ocmult}.  If the value of \code{n} is not specified then it takes the default value of $30$.  The default value for \code{N} is $100$.  For the proportion of defectives \code{pd} the default value depends on $k$, and on the type of distribution.  These default values for \code{pd} are given in Table~\ref{default}.
+
+\begin{table}[b!]
+\begin{tabular}[t]{|c|c|c|c|}
+\hline
+\code{type}&\code{stype}&\textbf{Arguments}&\textbf{Distribution}\\
+\hline
+\code{"multinomial"}&\code{"fixed"}&\code{rn}, \code{pd}, \code{n}&Multinomial\\
+\hline
+&\code{"sequential"}&\code{rn}, \code{pd}, \code{m}&Negative Multinomial\\
+\hline
+&&&\\
+\hline
+\code{"hypergeom"}&\code{"fixed"}&\code{rn}, \code{pd}, \code{n}, \code{N}&Multivariate Hypergeometric\\
+\hline
+&\code{"sequential"}&\code{rn}, \code{pd}, \code{m}, \code{N}&Negative Multivariate Hypergeometric\\
+\hline
+\end{tabular}%
+\caption{Arguments and sampling distributions for the \code{Ocmult} class.}
+\label{ocmult}
+\end{table}
+
+
+\begin{table}[t!]
+\begin{center}
+\begin{tabular}[t]{|c|c|}
+\hline
+$k$&Default Values for \code{pd}\\
+\hline
+$2$& All values of $p\in\{0,0.01,0.02,\ldots,0.1\}$\\
+\hline
+$3$&%
+\begin{tabular}[t]{c}
+A $121\times 2$ matrix whose rows consist of all possible combinations
+\\
+$(p_1,p_2)$ where $p_1,p_2\in\{0,0.01,0.02,\ldots,0.1\}$
+\end{tabular}%
+\\
+\hline
+&\\
+\hline
+$>3$&\code{type="multinom"}\\
+\hline
+&%
+\begin{tabular}[t]{c}
+A 10$\times(k-1)$ matrix whose $i^{th}$ row is given by\\
+$\frac{i}{25k(k-1)}$\code{c(1:(k-1))} \ (for $i=1,2,\ldots,10)$\\
+(so that the $i^{th}$ row has a total of $2i$\% defectives)
+\end{tabular}%
+\\
+\hline
+&\\
+\hline
+&\code{type="hypergeom"}\\
+\hline
+&%
+\begin{tabular}[t]{c}
+\code{round(N*pd)/N}, where \code{pd} is the same as for \code{type="multinom"}\\
+(so that \code{N*pd} gives integer values)
+\end{tabular}%
+\\
+\hline
+\end{tabular}%
+\end{center}
+\caption{Default values for the proportion of defectives \code{pd}.}
+\label{default}	
+\end{table}
+
+The new object is created and returned after the arguments are initialized and  validated by  the initialize and validation functions which are part of the class building.
+
+
+\subsection{Initialize and validation methods}
+\label{sec:Initi-valid-meth}
+
+When creating an object, the initialize function creates the value for each
+  argument according to the specified distribution. Then the validation 
+  functions for the virtual class and actual classes validate if the sampling 
+  plan makes sense for the specified distribution. The validation functions 
+  for the virtual class applies to both actual classes because of inheritance.
+
+ The validation function for the virtual class \code{Ocmult} checks that the vector \code{rn} contains no NAs, the values in the vector \code{rn} are greater than zero, the matrix \code{pd} contains no NAs, none of the entries in the matrix \code{pd} are less than 0, the sum of the values in each row of the matrix \code{pd} is not greater than 1, and that the length of the vector \code{rn} is equal to the number 
+            of columns in the matrix \code{pd}.
+
+
+In the validation functions  for  the actual class \code{Ocmult.multinomial},
+the arguments for fixed sampling are validated by checking that the sample size \code{n} has length one, is not NA, and is greater than 0, and that none of the values in \code{rn} are greater than \code{n}. For sequential sampling, the  additional checks are that the cell quota \code{m} for good items has length one, is not NA, and is greater than 0.
+
+For both fixed and sequential sampling, the validation function for \code{Ocmult.hypergeom} performs the same checks as for \code{Ocmult.multinomial} given above.  In addition, the validation function for \code{Ocmult.hypergeom} also checks that the lot size \code{N} is not NA, the value of \code{N} is greater than \code{n}, the length of  \code{N} is equal to 1, the entries in the matrix of \code{pd*N} are all integers, and that the length of the vector \code{rn} is less then \code{N}.  Note that this last condition is needed due to the fact that the \code{rn} vector has length $k-1$ and the number $k$ of different types of items in the lot can't be bigger than the lot size \code{N}.
+
+
+\subsection{Plot methods}
+\label{sec:plot-methods}
+
+The OC function of 2-level acceptance sampling 
+  plans can be presented by plotting the 2-dimensional OC curve corresponding to 
+  the sampling plans. In this package plot methods have been created for the 
+  actual classes with the proportion of defectives \code{pd} on the horizontal 
+  axis and the probabilities of acceptance \code{pa} on the vertical axis in the graph. To plot the OC curve corresponding to the sampling plan, only an object of the 
+particular class needs to be specified and all relevant details are extracted 
+from the object (see Section~\ref{sec:examples} for examples).
+
+The OC function of 3-level acceptance sampling plans can be presented
+  by two types of plots, \emph{persp} and \emph{contour}. In the \code{persp} 
+  methods for the actual classes, the proportions of defectives \code{pd} are 
+  on the two horizontal axes $x, y$ and the probabilities of acceptance 
+  \code{pa} are on the vertical axis $z$ in the graph. In the contour graph, the curves  represent the probabilities 
+  of acceptance \code{pa} for specific values corresponding the proportions of 
+  defectives \code{pd} on the two axes $x, y$.  An example is provided in 
+  Section~\ref{sec:examples}.
+
+\subsection{Summary methods}
+\label{sec:Summary methods}
+
+The generic \code{summary} method is used to summarize the object. 
+  The \code{show} method gives a brief summary of the supplied object. 
+  For fixed sampling it displays the type of distribution, the sample 
+  size \code{n}, and the rejection number(s) \code{rn}. For sequential 
+  sampling, it displays the type of distribution and the cell quotas 
+  \code{m} and \code{rn} for the good and the defective item(s). If 
+  the type of distribution is hypergeometric, then the lot size 
+  \code{N} is also shown.
+    
+The \code{summary} method shows the same detail as the \code{show}
+  method by default, but provides the additional logical argument
+ \code{detail}.  If \code{detail=TRUE}, then all the information 
+  for the object is printed, including all values of \code{pd} and the
+  corresponding values of \code{pa} as well as \code{ASN} 
+  (average sampling number) for sequential sampling.
+
+Examples of these methods are given in Section~\ref{sec:examples}.
+
+
+\subsection{Assessing a sampling plan}
+\label{sec:assess-plan}
+
+The function \code{assess.multi} can be used to assess whether a user-specified sampling 
+  plan can meet certain criteria.  The two types of criteria, the 
+  \emph{producer's risk point} (PRP) and the \emph{consumer's risk point} (CRP), 
+  can be specified singly or together by the arguments \code{PRP} and 
+  \code{CRP}, respectively. 
+  
+  \code{PRP} is a vector of length  $k$ which  contains two parts. 
+   The first part consists of $k-1$ elements that are the proportions of each type of defective in the lot which are considered by the producer to be acceptable, i.e., the PQL. The second part is the $k$th element 
+   which represents a lower limit for the corresponding probability of acceptance.  For the producer's risk point to be met, the acceptance probability of 
+  the plan must be \emph{at least} equal to the value specified by the user 
+  in the $k$th component of \code{PRP} when the proportions of defectives are equal to the values specified by the user in the first $k-1$ components of \code{PRP}.  This means that the producer's risk $\alpha$ for the user-specified plan must be \emph{at most} equal to 1 minus the $k$th component of \code{PRP} for the risk point to be met.
+   
+   Similarly the \code{CRP} vector contains the consumer's quality level (CQL) in the first $k-1$ components and an upper limit for the corresponding probability of acceptance in the last component.  For the consumer's risk point to be met, the acceptance probability of 
+  the plan must be \emph{at most} equal to the value specified by the user 
+  in the $k$th component of \code{CRP} when the proportions of defectives are equal to the values specified by the user in the first $k-1$ components of \code{CRP}.  This means that the consumer's risk $\beta$ for the user-specified plan must be \emph{at most} equal to the $k$th component of \code{CRP}
+
+The argument \code{print} in the function \code{assess.multi} indicates whether 
+  a summary of the assessment should be printed. The default value is \code{print=TRUE}.
+The remaining arguments and parameters are the same as the classes, which are summarized in Table~\ref{ocmult}.   
+
+\subsection{Finding a sampling plan}
+\label{sec:find-plan}
+
+The function \code{find.multi.plan} allows the user to find a
+multilevel acceptance sampling plan which meets specified producer 
+and consumer risk points (see Section~\ref{sec:assess-plan}).  
+Both points must be specified in the function and the CRP must 
+have worse quality than the PRP.
+
+In the case of \code{type="multinomial"}, only the PRP 
+  and CRP need to be specified.  For \code{type ="hypergeom"},
+  the additional argument \code{N} (the lot size) must be provided.
+
+For \code{fixed} sampling, the function finds the smallest sample size $n$ and 
+  the corresponding rejection numbers for each type of defective which will meet 
+  the PRP and CRP requirements. The process of finding a plan is through trial starting 
+  with $n=1$ and increasing $n$ until the appropriate plan is found.
+  The rejection numbers for the defectives change appropriately at each step.
+  For the \code{sequential} sampling, the function finds the smallest
+  quota $m$ for the good items and the corresponding cell quotas for each
+  type of defective, which will meet the PRP and CRP requirements. The process 
+  is through trial starting with $m=1$ and increasing $m$ until the appropriate 
+  plan is found. The cell quotas for defectives change appropriately at each 
+  step but do not exceed the quota for the good items. 
+
+%%\newpage   
+\section{Examples}
+\label{sec:examples}
+
+\subsection[Creating Ocmult plans]{Creating \code{Ocmult} plans}
+\label{sec:example-plans}
+A new object of the sampling plan can 
+  be created by using the \code{Ocmult} function. For example, a 
+  sampling plan with $n=20$ and $rn=(2,4,3)$ for a large  
+  lot size can be obtained as follows:  
+
+<<echo=false>>=
+options(prompt = "R> ", continue = "+  ", width = 70, useFancyQuotes = FALSE)
+@
+
+<<>>=
+library("MFSAS")
+plan.mf <- Ocmult(rn=c(2,4,3), n=30)
+plan.mf
+@
+
+
+
+Optionally, the types of defectives can be specified by using the built-in \proglang{R} function \code{names} to name the components of the $rn$ vector:
+
+<<>>=
+rn <- c(2,4,3)
+names(rn) <- c("Critical","Major","Minor")
+plan.mf <- Ocmult(rn=rn, n=30)
+plan.mf
+@
+
+
+
+For a finite lot of size $N=100$, \code{type="hyper"} should be specified.
+(Note that argument matching is used for the \code{type} and \code{stype} arguments, so it is only necessary to enter enough letters to uniquely identify the distribution and the type of sampling.)
+  If the sample size is $n=15$, and if
+  $rn=(2,3)$, then the sampling plan is obtained as:
+
+<<>>=
+plan.hf<- Ocmult(rn=c(2,3), n=15, N=100, type="hyper")
+plan.hf
+@
+
+
+
+Now consider a sequential sampling plan in which sampling
+continues until we obtain either 5 good items or 3 defectives.
+In this case we use \code{stype="seq"}, and the target number $m$ of good items must 
+  be specified:
+
+<<>>=
+plan.ms <- Ocmult(rn=3, m=5, stype="seq", pd=seq(0, 0.99, 0.01))
+plan.ms
+@
+
+
+If the defective items are classified as ``Marginal" or ``Bad" in a lot of size $N=100$, and we continue to sample until we obtain either 4 good items, 5 Marginal items, or 2 Bad items, then the 3-level sequential sampling plan can be obtained as follows:
+
+<<>>=
+rn <- c(5,2)
+names(rn) <- c("Marginal","Bad")
+plan.hs <- Ocmult(rn=rn, m=4, N=100, type="hyper",stype="seq")
+plan.hs
+@
+
+
+\subsection{Plotting sampling plans}
+\label{sec:example-plotting}
+
+The OC curve or surface can be plotted when the sampling plans 
+  are 2-level or 3-level.
+
+For the 2-level sequential sampling plan 
+  with \code{type="multinomial"} given in the example above, 
+  the plot is shown in Figure~\ref{fig:two}:
+
+<<label=fig2, fig=TRUE, echo=TRUE, include=FALSE, width=5, height=5>>=
+ plot(plan.ms)
+@
+
+
+  
+\begin{figure}[t!]
+\centering
+\includegraphics[width=0.6\textwidth]{figure-fig2}
+\caption{OC curve for sequential sampling, with replacement.}
+\label{fig:two}
+\end{figure} 
+
+
+
+All arguments for the standard  plot method can be passed directly 
+ to the generic \code{plot} method in this package.  For the binomial 
+ and negative binomial distributions the OC curve is, by default, plotted with both 
+ lines and points by using \code{type="o"} in the standard plot type.  The OC curve for the hypergeometric and 
+ negative hypergeometric distributions are, by default, plotted only with points by using \code{type="p"} in
+ the standard plot type.
+
+
+The following example is for 2-level sampling plans for all four combinations of the sampling type and distribution.  Since the proportion of defectives in the population is typically small, we use values of $pd$ so that the probabilities of acceptance for proportions of defectives between 0 and 0.2 can be more clearly seen on the $y$-axis of the resulting graphs, which are given in Figure~\ref{fig:three}.
+<<label=fig3, fig=TRUE, echo=TRUE, include=FALSE, width=10, height=5>>=
+  x.mn <- Ocmult(n=8, rn=3, pd=seq(0, 0.22, 0.01))
+  x.mh <- Ocmult(n=8, rn=3, N=50, type="hyper", pd=seq(0, 0.2, 0.02))
+  x.nmn <- Ocmult(rn=2,m=4, stype="seq", pd=seq(0, 0.22, 0.01))
+  x.nmh <- Ocmult(rn=2, m=4, N=50, type="hyper", stype="seq", pd=seq(0, 0.2, 0.02))
+  par(mfrow=c(1,2))
+  main = "Fixed Sampling Plan \nn = 8, rn = 3"
+  plot(x.mn, type="l", xlim=c(0, 0.2), ylim=c(0.75, 1), main=main)
+  grid(lty="solid")
+  points(x.mh@pd, x.mh@pa, col = 3)
+  legend(0.01, 0.81, c("binomial", "hypergeometric"), col = c(1,3), 
+     lty = c(1, -1), pch = c(-1, 1), bg = 'gray95')
+  main = "Sequential Sampling Plan \nm = 4, rn = 2"
+  plot(x.nmn, type="l", xlim=c(0, 0.2), ylim=c(0.7, 1), main=main) 
+  grid(lty="solid")
+  points(x.nmh@pd, x.nmh@pa, col= 3 )
+  legend(0.01, 0.77, c("negative binomial", "negative hypergeometric"), col = c(1,3), 
+     lty = c(1,-1),  pch = c(-1, 1), bg = 'gray96')
+@
+
+
+
+From both graphs in Figure~\ref{fig:three} we see that the probabilities for acceptance are higher for the hypergeometric distribution than for the binomial.  So, for example, if the lot size is $N=50$ and a proportion of defectives of 5\% is considered acceptable, then sampling without replacement will result in a smaller value for the producer's risk.  On the other hand, if a proportion of defectives of 15\% is considered unacceptable, then sampling without replacement will result in a larger value for the consumer's risk.  This relationship between binomial and hypergeometric probabilities will generally be true for small values of $pd$.  But for large values of $pd$ the binomial probabilities will be higher.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=1\textwidth]{figure-fig3}
+\end{center} 
+\caption{OC curve for fixed sampling and sequential sampling.}
+\label{fig:three}
+\end{figure} 
+
+
+For 3-level sampling plans, all arguments for the `persp' and  `contour'  methods can be passed directly 
+  to the generic \code{persp} and \code{contour} functions in this package, respectively.
+For example, in Figure~\ref{fig:four} we use light blue color for the surface and 4 contour levels for the contour plot, 
+
+
+<<label=fig4,fig=TRUE,echo=TRUE, include=FALSE, width=10, height=5>>=
+ par(mfrow=c(1,2))
+  px <- matrix(c(seq(0,0.2, 0.01),seq(0, 0.8, 0.04)),ncol=2)
+  p.multinom <- Ocmult(n=15,rn=c(2,10), pd=px)
+  persp(p.multinom, col="light blue")
+  contour(p.multinom, nlevel=4)
+@
+
+  
+\begin{figure}[t!]
+  \centering
+\includegraphics[width=1\textwidth]{figure-fig4}
+  \caption{OC surface and contour curve for fixed sampling without replacement, with $N=100, n=15, rn=(2, 3)$.}
+  \label{fig:four}
+\end{figure}
+
+
+
+%%\newpage
+\subsection{Sampling plan summary}
+\label{sec:example-summary}
+
+  The \code{summary} method gives a summary of the sampling plan with
+   an option for detailed output,  as in the following example. 
+<<>>=
+  px <- matrix(c(seq(0, 0.5, 0.1), seq(0, 0.2, 0.04),seq(0, 0.1, 0.02)), ncol=3)
+  rn <- c(5,4,2)
+  names(rn) <- c("Critical","Major","Minor")
+  p.multinom <- Ocmult(n=30,rn=rn, pd=px)
+  summary(p.multinom ,detail=TRUE )
+@
+
+
+
+  Note that \code{pd} is a matrix with $k-1$ columns, where each row 
+    contains the proportions for each type of defective in the lot. 
+    However, if a vector is provided, then it is converted to a matrix by 
+    row according to the length of \code{rn}. The vector will be truncated
+    (with a warning) if its length is not an integer multiple of the length
+    of \code{rn}. An example follows:
+<<>>=
+  px <- c(0.02, 0.06, 0.04, 0.06, 0.08, 0.02, 0.02, 0.08, 0.04, 0.10)
+  pmh <- Ocmult(rn = c(2, 3, 2, 4), n = 20, N = 100, pd = px, type = "hyper")
+@
+
+\begin{verbatim}
+Warning message:
+In .local(.Object, ...) :
+  The length of the pd vector should be an integer 
+multiple of the length of the rn vector. 
+The truncated pd in use is: 
+0.02  0.06  0.04  0.06  0.08  0.02  0.02  0.08
+\end{verbatim}
+
+
+
+%%\newpage
+\subsection{Assessing a sampling plan}
+\label{sec:example-assess}
+
+The \code{assess.multi} function is used to assess a sampling plan
+  given the PRP and/or  CRP (see Section~\ref{sec:assess-plan} 
+  for a description).  For example, suppose that we have two types of defectives, 
+  ``Marginal'' and ``Bad'', and we want a 3-level plan to meet 
+  the producer's risk point which has an acceptance probability of 
+  \emph{at least} 0.95 when the proportions of the 2 types of defectives
+  are equal to 0.05 and 0.06, and for the plan to also meet the consumer's 
+  risk point, which has an acceptance probability \emph{at most} 0.1 
+  when the proportions of the 2 types of defectives are equal to 0.14, and 0.18.
+ We can assess whether the sequential plan with cell quotas of $m=5$ good items and
+ $rn=(2, 3)$ defectives meets the given PRP and CRP as follows: 
+<<>>=
+ rn <- c(2,3)
+ names(rn) <- c("Marginal","Bad")
+ assess.multi(rn=rn, m=5, PRP = c(0.05,0.06, 0.95), CRP = c(0.14,0.18, 0.1), 
+  stype="seq" )
+@
+
+
+
+The output shows that the plan cannot meet both risk points.
+  Although the PRP is satisfied since the actual value for 
+  P(accept) is  0.956, which exceeds minimum desired level of 0.95, 
+  the value of P(accept) for CRP is  0.628 which is 
+  greater than the maximum allowable level of 0.1. For sequential
+  sampling, the output also displays the average sampling number(s) 
+  ASN for the risk point(s).
+
+\subsection{Finding a sampling plan}
+\label{sec:example-find}
+
+The \code{find.multi.plan} function provides a method to  find a plan which will meet 
+  the specified risk points PRP and CRP. For example, the implementation 
+  of \code{find.multi.plan} for sequential sampling from a lot of size 100 is:
+
+<<>>=
+  find.multi.plan(PRP=c(0.06, 0.04, 0.06, 0.8), CRP=c(0.14, 0.16, 0.2, 0.1), 
+   N= 100,type = "hyper", stype="seq") 
+@
+
+
+
+This shows that, in order to meet both risk points, we should take observations 
+  one at a time until we get either $m=7$ good items, or 2 of any type of defective. 
+  If the former occurs first then the lot should be accepted; otherwise it is 
+  rejected. The probability of acceptance at the producer's quality level is $0.806$ and at the consumer's quality level is $0.081$.  The average sampling number is ASN $=7.6$ at the producer's quality level,
+  and ASN $=5.5$ at the consumer's quality level. 
+  
+We can also find a plan with the same risk points PRP, CRP, and  
+lot size as above but for fixed sampling:  
+<<>>=
+  find.multi.plan(PRP=c(0.06, 0.04, 0.06, 0.8), CRP=c(0.14, 0.16, 0.2, 0.1), 
+   N= 100,type = "hyper") 
+@
+
+
+The above output shows that if we want to meet both risk points, we need a sample of 
+  size $n=11$. The lot is rejected if the sample contains at least 2 of either 
+  of the first two types of defectives, or at least 3 of the third type of defective.
+  Hence to meet both risk points, the sequential sampling procedure requires on average 
+  a smaller sample size (ASN $=7.6$) than the corresponding fixed sample size 
+  procedure ($n=11$).
+ 
+  
+
+
+\section{Cumulative distribution functions}
+\label{sec:Calculate-cdf}
+
+The \pkg{MFSAS} package also includes functions to calculate the cumulative 
+  distribution functions (CDFs) for the multinomial, negative 
+  multinomial, multivariate hypergeometric, and negative multivariate 
+  hypergeometric distributions which are required for the calculation of 
+  acceptance probabilities for the multilevel sampling plans in this package.
+  A brief description follows, and the reader is referred to \cite{Johnson1997} 
+  for further details about these distributions.
+
+
+  
+%%\newpage 
+\subsubsection[pmultinom - The multinomial CDF]{\code{pmultinom} - The multinomial CDF}
+\label{sec:multinom-cdf}
+
+The multinomial distribution is used for sampling \emph{with} replacement, or
+  if the lot is large compared to the sample size. If a sample
+  of size  $n$ is drawn from a lot whose $k$ classes have probabilities
+  $p_1,\ldots, p_{k-1}, p_k$, let $X_1, \ldots, X_{k-1}, X_k$ denote the 
+   number of observations drawn from each of the $k$ classes. Let \code{x} be a vector of length $k-1$ corresponding to the observed number of items drawn from the first $k-1$ classes, and let \code{p} be a vector containing the probabilities for each of those $k-1$ classes.  Then the cumulative probability \code{pmultinom(x, size=n, prob=p)} is given by   
+  
+$$
+\begin{array}{ll}
+    &P(X_1 \leq x_1,\dots, X_{k-1} \leq x_{k-1})\\\\
+    &\quad = \sum\limits_{y_1=0}^{x_1} \dots \sum\limits_{y_{k-1}=0}^{x_{k-1}}
+    P(X_1 = y_1, \dots, X_{k-1} = y_{k-1})\\\\
+    &\quad =\sum\limits_{y_1=0}^{x_1} \dots \sum\limits_{y_{k-1}=0}^{x_{k-1}}
+     \frac{n!}{y_1! \dots y_{k-1}!\left(n-\sum_{i=1}^{k-1}y_i\right)!}p_1^{y_1} 
+     \dots p_{k-1}^{y_{k-1}}\left(1-\sum\limits_{i=1}^{k-1}p_i\right)^
+     {\left(n-\sum\limits_{i=1}^{k-1}y_i\right)}
+  \end{array}
+$$
+where the sum is over all values of $y$ such that $\sum\limits_{i=1}^{k-1}y_i \leq n$.   
+
+\code{pmultinom} is computed using recursive algorithms for 
+  the Dirichlet {\bf J} function given in \cite{Sobel1977} and \cite{Sobel2004}.
+
+\subsubsection[pnmultinom - The negative multinomial CDF]{\code{pnmultinom} - 
+               The negative multinomial CDF}
+\label{sec:negmultinom-cdf}
+
+The negative multinomial distribution is used for sequential sampling 
+  \emph{with} replacement. Suppose that the lot has $k-1$ different types of  
+ failures, with corresponding probabilities 
+ $p_1, \ldots, p_{k-1}$ in each trial.  Let $X_1, \ldots, X_{k-1}$ denote 
+  the number of failures of each type that are selected in a sequence of trials 
+ before a target number $m$ of successes is reached.  (Note that success corresponds to selecting a nondefective or good item.) Then 
+ \code{pnmultinom(x, m, prob=p)} is the cumulative probability:
+$$
+\begin{array}{ll}
+ &P(X_1 \leq x_1, \dots, X_{k-1} \leq x_{k-1}) \\\\
+ & = \sum\limits_{y_1=0}^{x_1} \dots 
+\sum\limits_{y_{k-1}=0}^{x_{k-1}} P(X_1 = y_1 , \dots, X_{k-1} = y_{k-1} )\\\\
+&=\sum\limits_{y_1=0}^{x_1} \dots \sum\limits_{y_{k-1}=0}^{x_{k-1}} 
+\frac{\left(\sum\limits_{i=1}^{k-1}y_i + m -1\right)!}{(m-1)!y_1! \dots  y_{k-1}!}
+p_1^{y_1} \dots p_{k-1}^{y_{k-1}}\left(1-\sum\limits_{i=1}^{k-1}p_i\right)^m
+\end{array}
+$$
+
+Note that for this distribution to makes sense, the probability of success cannot be zero.  Therefore we must have that $\sum\limits_{i=1}^{k-1}p_i < 1$.
+
+When $k=2$ this gives the negative binomial CDF, but is parameterized differently from the \code{pnbinom} function in the \pkg{stats} package in which \code{prob} denotes the probability of success.  Therefore for scalars \code{x}, \code{m}, and \code{p} we have that \code{pnmultinom(x,m,p)} $ = $ \code{pnbinom(x,m,1-p)}.
+
+\code{pnmultinom} is computed using recursive algorithms for the Dirichlet {\bf D} 
+  function given in \cite{Sobel1985} and \cite{Sobel2004}.
+ 
+%%\newpage 
+\subsubsection[pmultihyper - The multivariate hypergeometric CDF]{
+               \code{pmultihyper} - The multivariate hypergeometric CDF}
+\label{sec:multihyper-cdf}
+
+The multivariate hypergeometric distribution is used for sampling 
+ from a finite lot \emph{without} replacement. If a sample
+  of size  $n$ is drawn from a lot of size $N$ which 
+  has $M_i$ objects of type $i$ (for $i= 1,2, \ldots, k$),
+  let $X_i$ be the number of objects of type $i$ in the sample 
+   (for $i= 1,2,\ldots, k$). Let \code{x} be a vector of length $k-1$ corresponding to the observed number of objects drawn from each of the first $k-1$ classes, and let \code{M} be a vector containing the sizes for each of those $k-1$ classes. Then
+  the cumulative probability \code{pmultihyper(x, n, M, N)} is given by, 
+$$
+  \begin{array}{ll}
+     &P(X_1 \leq x_1,\dots, X_{k-1} \leq x_{k-1}) \\\\
+     &=\sum\limits_{y_1=0}^{x_1}\dots\sum\limits_{y_{k-1}=0}^{x_{k-1}}
+     P(X_1= y_1,\dots, X_{k-1} = y_{k-1})\\\\
+     &=\sum\limits_{y_1=0}^{x_1}\dots\sum\limits_{y_{k-1}=0}^{x_{k-1}}
+     \frac{\left({M_1 \atop y_1}\right) \dots 
+     \left({M_{k-1} \atop y_{k-1}}\right)
+     \left({N-\sum\limits_{i=1}^{k-1}M_i \atop n-\sum\limits_{i=1}^{k-1}y_i}\right)}{\left({N \atop n}\right)}
+  \end{array}
+$$ 
+where the sum is over all values of $y$ such that $\sum\limits_{i=1}^{k-1}y_i \leq n$ and 
+  $n - \sum\limits_{i=1}^{k-1}y_i \leq N - \sum\limits_{i=1}^{k-1}M_i$.
+  
+\code{pmultihyper} is computed using recursive algorithms for the Dirichlet {\bf HJ}  
+  function given in \cite{Sobel1994}.
+
+Note that if $M_i$ and $N$ approach infinity in such a way that the ratio $M_i/N = p_i$ is fixed (for $i= 1,2,\ldots, k$) then the multivariate hypergeometric density function converges to the multinomial density function.  Therefore the multinomial distribution can be used as an approximation to the multivariate hypergeometric distribution when sampling is without replacement and the population size is large.  When $k=2$, a general guideline for the use of this approximation is that the population size $N$ should be at least 20 times the sample size $n$.  For $k>2$ the situation is not as straightforward, but error bounds for this approximation can be found in \cite{Loh1992}.  A numerical example illustrating this convergence is given in Section~\ref{sec:example-mult-cdf} below.
+
+
+\subsubsection[pnmultihyper - The negative multivariate hypergeometric 
+               CDF]{\code{pnmultihyper} - The negative multivariate hypergeometric CDF}
+\label{sec:negmultihyper-cdf}  
+
+The negative multivariate hypergeometric distribution is used for sequential
+  sampling from a finite lot \emph{without} replacement. Suppose that the 
+  lot of size $N$ has $k-1$ different types of failures represented 
+  $M_1, \ldots, M_{k-1}$ times, respectively. Let $X_1, \ldots, X_{k-1}$ denote the number 
+  of failures of each type that are selected in a sequence of trials 
+  before a target number $m$ of successes is reached. Then
+  \code{pnmultihyper(x, m, M, N)} is the cumulative probability:
+$$
+\begin{array}{ll}
+    &P(X_1 \leq x_1, \dots, X_{k-1} \leq x_{k-1})\\\\
+    &= \sum\limits_{y_1=0}^{x_1} \dots \sum\limits_{y_{k-1}=0}^{x_{k-1}} 
+    P(X_1 = y_1 , \dots, X_{k-1} = y_{k-1})\\\\
+    &=\sum\limits_{y_1=0}^{x_1} \dots \sum\limits_{y_{k-1}=0}^{x_{k-1}} 
+    \frac{\left({M_1 \atop y_1}\right)\cdots \left({M_{k-1} \atop y_{k-1}}\right)
+  \left({N-\sum\limits_{i=1}^{k-1}M_i \atop m-1}\right)}{\left({N \atop m-1+\sum\limits_{i=1}^{k-1}y_i}\right)}
+   \frac{N - m +1 -\sum\limits_{i=1}^{k-1}M_i}{N - m +1 -\sum\limits_{i=1}^{k-1}y_i}
+  \end{array}
+$$  
+where the sum is over all values of $y$ such that $\sum\limits_{i=1}^{k-1}y_i \leq N-m$.
+
+Note that the target number of successes $m$ cannot be bigger than the total number of successes in the population.  Therefore for this distribution to makes sense, we must have that $0 < m \leq N - \sum\limits_{i=1}^{k-1}M_i$.
+
+As with the multivariate hypergeometric and multinomial distributions, if $M_i$ and $N$ approach infinity in such a way that the ratio $M_i/N = p_i$ is fixed (for $i= 1,2,\ldots, k$) then the negative multivariate hypergeometric density function converges to the negative multinomial density function.  Therefore the negative multinomial distribution can be used as an approximation to the negative multivariate hypergeometric distribution when sampling is without replacement and the population size is large.  See Section~\ref{sec:example-mult-cdf} below for an example.
+
+\code{pnmultihyper} is computed using recursive algorithms 
+  for the Dirichlet {\bf HD} function. See \cite{Childs2010} and \cite{Sobel1995}.
+
+
+\subsection{Examples of calculating cumulative probabilities}
+\label{sec:example-mult-cdf}
+
+ The following are examples of how to calculate the lower tail cumulative probabilities
+ for each of the above distributions.
+ 
+\begin{itemize}
+  \item Multivariate hypergeometric distribution:
+
+Suppose that a lot of size $N=100$ contains products which are classified according to 
+  4 levels of product quality, one of which is good items. If $M=(8, 10, 14)$ is the 
+  number of items in the lot which fall into each of the three categories of defectives, 
+  and we draw a sample of size $n=15$ (without replacement) from the lot, then the 
+  probability that the sample contains no more than 1 item with the first type of defect,
+  no more than 3 items with the second type of defect, and  no more than 4 items with 
+  the third type of defect is calculated as follows:
+
+<<>>=
+ X <- c(1,3,4)
+ n <- 15
+ M <- c(8, 10, 14)
+ N <- 100
+ pr <- pmultihyper(X, n, M, N)
+ pr
+@
+
+
+ 
+ \item Multinomial distribution:
+ 
+ In the same setting as above, if the sampling is done with replacement, or equivalently
+   if the lot size is large and the proportions of each of the 3 types of defects in the 
+   lot is given by $p=(0.08, 0.10, 0.14)$, then the corresponding probability is 
+   calculated using the multinomial CDF:
+
+<<>>=
+ X <- c(1, 3, 4)
+ n <- 15
+ pr <- c(0.08, 0.10, 0.14)
+ cdf <- pmultinom(x = X, size = n, prob = pr)
+ cdf
+@
+
+
+Alternatively, since the multinomial distribution is the limiting form of the multivariate hypergeometric distribution, the same result can be obtained using \code{pmultihyper} and a numerical limiting process by letting $M$ and $N$ in the previous example approach infinity in such a way that the ratio $M/N = (0.08, 0.10, 0.14)$ is fixed:
+
+<<>>=
+ for (i in c(0:6)) 
+ print(pmultihyper(X, n, 10^i*M, 10^i*N))
+@
+
+
+  \item Negative multivariate hypergeometric distribution:
+  
+ Suppose that a lot of size $N=130$ contains items with 4 different types of product
+   defects with $M=(5, 7, 8, 3)$ of each type. If we select and inspect items one at 
+   a time (without replacement) until we obtain 5 good items then the probability 
+   that we end up with no more than $X=(2, 3, 4, 1)$ items with each type of defect
+   (at the time when the $5^{th}$ good item is selected) is calculated as follows:
+
+ 
+<<>>=
+ X <- c(2,3,4,1)
+ m <- 5 
+ M <-c(5,7,8,3)
+ N <-130
+ cdf <- pnmultihyper(X, m, M, N)
+ cdf
+@
+
+ 
+ \item Negative multinomial distribution:
+ 
+ In the same setting as above, if the sampling is done with replacement then
+   the corresponding probability is calculated using the negative multinomial distribution:
+
+<<>>=
+ X <- c(2,3,4,1)
+ m <-5
+ pr <-c(5/130, 7/130, 8/130, 3/130)
+ pnmultinom(x = X, m = m, prob = pr)
+@
+
+
+As with the multinomial distribution, the same result can be obtained using\\ \code{pnmultihyper} and a numerical limiting process:
+
+<<>>=
+for (i in c(0:6)) print(pnmultihyper(X, m, 10^i*M, 10^i*N))
+@
+
+
+\end{itemize}
+
+\section{Discussion}
+\label{sec:discussion}
+
+The \pkg{MFSAS} package provides the user with the tools to create, evaluate, plot, and
+  display multilevel acceptance sampling plans for both fixed and sequential sampling.
+  We have also provided cumulative distribution functions for several discrete
+  multivariate distributions.
+  
+Our sampling plans are currently restricted to one-stage sampling. Multi-stage
+  sampling may be incorporated into future versions of the package. For users 
+  interested in multi-stage fixed sampling plans for two levels of product quality, 
+  the \pkg{AcceptanceSampling} package can be used.
+  
+We should also note that all of the procedures used for the calculations in this 
+  package are exact (aside from possible rounding errors) and are written entirely in R. As a result there is 
+  the potential for the calculations to be slow for large values of $k$, $m$, 
+  and $n$. Consequently the \code{find.multi.plan} function can be slow if the 
+  probability given in the last component of the producer's risk point is too close to 1
+  or if the corresponding probability in \code{CRP} is too close to 0. Therefore the package could be improved 
+  by developing and incorporating asymptotic approximations into the calculations, 
+  or by using compiled code for the CDFs.
+  
+Our cumulative distribution functions currently do not have the option for 
+    calculating upper tail probabilities. This option is available for
+    most (if not all) of the currently available {R} functions for discrete
+    univariate CDFs. However, the relationship between upper and 
+    lower tail probabilities is not as straight forward in the multivariate 
+    case. Efficient calculation of upper tail probabilities would require
+    a different (but related) set of recursive algorithms. As a result of this, 
+    and the fact that upper tail probabilities are not needed in this package, 
+    our CDFs do not currently have this functionality. Since upper tail 
+    probabilities may be useful in other applications, this is another area 
+    in which the package can be improved.
+    
+Finally, we hope that practitioners will find this package useful and we welcome
+any other suggestions for improvements, or for added functionality.
+
+
+\section*{Acknowledgements}
+\label{sec:acknowledgements}
+
+The first author would like to thank the Natural Sciences 
+  and Engineering Research council of Canada for funding this research.  We would also like to thank the editor and an anonymous referee for providing suggestions which let to an improvement in this paper, and in the package as a whole.
+
+\bibliography{MFSAS}
+
+\end{document}
+
