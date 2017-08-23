@@ -44,3 +44,24 @@ dPos2 <- dmultinom(xPos2,n,p)
 expect_lt(abs(pHigh-pLow-dPos1-dPos2),10e-15)
 })
 
+test_that("ppamultinom is ok with dmultinom",{
+X <- c(0,1,1,0,1)
+size <- 5
+prob <- c(0.1,0.2,0.15,0.1,0.45)
+expect_equal(ppamultinom(X,3,prob),dmultinom(X,3,prob))
+
+X <- c(0,0,0,0,1)
+expect_equal(ppamultinom(X,size,prob),dmultinom(X*size,size,prob))
+
+X <- c(0,1,0,1,1)
+size <- 4
+p <- dmultinom(c(0,2,0,1,1),size,prob) + dmultinom(c(0,1,0,2,1),size,prob) + dmultinom(c(0,1,0,1,2),size,prob)
+expect_equal(ppamultinom(X,size,prob),p)
+
+size <- 5
+p <- dmultinom(c(0,3,0,1,1),size,prob) + dmultinom(c(0,2,0,2,1),size,prob) + dmultinom(c(0,2,0,1,2),size,prob) +
+    dmultinom(c(0,1,0,3,1),size,prob) + dmultinom(c(0,1,0,1,3),size,prob) + dmultinom(c(0,1,0,2,2),size,prob)
+expect_equal(ppamultinom(X,size,prob),p)
+})
+
+
