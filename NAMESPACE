@@ -17,4 +17,6 @@ export("assess.multi",
        "pmultihyper",
        "pmultinom",
        "pnmultihyper",
-       "pnmultinom")
+       "pnmultinom",
+       "ppamultinom"
+)

@@ -21,6 +21,8 @@ ppamultinom <- function(X,size,prob,init=TRUE){
         if(length(X)!=length(prob)){
             stop("length(X)!=length(prob)")
         }
+        X <- as.integer(X)
+        prob <- as.numeric(prob)
     }
     if(sum(X,na.rm=TRUE)>size){
         p <- 0
@@ -42,3 +44,4 @@ ppamultinom <- function(X,size,prob,init=TRUE){
 
     return(p)
 }
+
